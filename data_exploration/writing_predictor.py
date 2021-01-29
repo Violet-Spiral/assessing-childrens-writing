@@ -103,5 +103,3 @@ def predict_grade(text, strategy='grammarize'):
     processed_text = process_text(df, strategy)
     model = pickle.load(open('best_model.pkl','rb'))
     return model.predict([processed_text[0]])[0]
-
-                         
