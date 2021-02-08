@@ -1,9 +1,13 @@
 import pandas as pd
+import numpy as np
 from string import punctuation, digits
 import re
 from nltk import pos_tag
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer 
+from sklearn.model_selection import cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 def separate_sentences(df):
     sentence_df = pd.DataFrame(columns=['Text','Grade'])
@@ -97,7 +101,7 @@ def tag_uppercase(series):
     return series.str.replace('[A-Z]\w+',repl,regex=True)
 
 def remove_weird_chars(string):
-    weird_chars = [ '¦', '©', '±', '³', '½', 'Â', 'Ã', 'â', '“', '”', '€']
+    weird_chars = [ '¦', '©', '±', '³', '½', 'Â', 'Ã', 'â', '“', '”', '€','\n']
     return ''.join([c for c in string if c not in weird_chars])
 
 def grammar_text(series):
@@ -115,3 +119,31 @@ def lemmatize_grammarize_text(df):
     df['lemmatized'] = lemma_text(df.Text).str.join(' ')
     df['grammarized'] = grammar_text(df.Text)
     return df
+
+def assess_model(model, X_train, y_train, scores=None, ngram_range=(1,3)):
+    if not scores:
+        scores = pd.DataFrame(columns = ['model','ngram','encoding'])
+    for ngram in range(ngram_range[0],ngram_range[1]+1):
+        lr_count_pipe = Pipeline([('vectorizer', CountVectorizer(ngram_range=(1,ngram))),
+                                  ('logreg', model)])
+        lr_tfidf_pipe = Pipeline([('vectorizer', TfidfVectorizer(ngram_range=(1,ngram))),
+                              ('logreg', model)])
+        tfidf_scores = cross_val_score(lr_tfidf_pipe, X_train, y_train, cv=3, 
+                                         scoring='neg_mean_absolute_error')
+        
+        count_scores = cross_val_score(lr_count_pipe, X_train, y_train, cv=3, 
+                                         scoring='neg_mean_absolute_error')
+        scores = scores.append({'model':type(model).__name__,
+                        'encoding':'Count Vectors',
+                        'ngram':ngram,
+                       'score':-np.mean(count_scores)},
+                      ignore_index=True)
+
+        scores = scores.append({'model':type(model).__name__,
+                        'encoding':'TF-IDF Vectors',
+                        'ngram':ngram,
+                      'score':-np.mean(tfidf_scores)},
+                      ignore_index=True)
+        print('finished ngram', ngram)
+        
+    return scores
