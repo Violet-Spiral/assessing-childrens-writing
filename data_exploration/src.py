@@ -2,22 +2,26 @@ import pandas as pd
 import numpy as np
 from string import punctuation, digits
 import re
+import keras
 from nltk import pos_tag
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer 
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+import warnings
+warnings.filterwarnings('ignore')
 
 def separate_sentences(df):
-    sentence_df = pd.DataFrame(columns=['Text','Grade'])
-    for i, row in df.iterrows():
-        text = isolate_punctuation(row.Text)
-        sents = text.strip().split('.')
-        for sent in sents:
-            sentence_df = sentence_df.append({'Text':sent,'Grade':row.Grade}, ignore_index=True)
-    sentence_df = sentence_df.loc[sentence_df['Text'] != '']
-    return sentence_df
+    if type(df) == str:
+        df = re.split('\;|\n|\.|\?|\!', df)
+        df = pd.DataFrame(df, columns=['Text'])
+        df = df[df['Text'] != ''].dropna().reset_index(drop=True)
+    else:
+        df.Text = df.Text.str.split(pat='\;|\n|\.|\?|\!', expand=False)
+        df = df.explode('Text').dropna()
+        df = df[df.Text != ''].reset_index(drop=True)
+    return df
 
 def load_text(sentences=False, grammarize=False):
     df = pd.read_csv('../data/samples_no_title.csv',
@@ -147,3 +151,11 @@ def assess_model(model, X_train, y_train, scores=None, ngram_range=(1,3)):
         print('finished ngram', ngram)
         
     return scores
+
+def load_model():
+    return keras.models.load_model('best-MLP')
+
+def predict_grade(model, text):
+    text = separate_sentences(text)
+    text.Text = text.Text.apply(lower_case)
+    return model.predict(text.Text).mean()
