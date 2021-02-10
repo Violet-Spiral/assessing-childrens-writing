@@ -16,11 +16,11 @@ def separate_sentences(df):
     if type(df) == str:
         df = re.split('\;|\n|\.|\?|\!', df)
         df = pd.DataFrame(df, columns=['Text'])
-        df = df[df['Text'] != ''].dropna().reset_index(drop=True)
+        df = df[df.Text.str.len() > 10].dropna().reset_index(drop=True)
     else:
         df.Text = df.Text.str.split(pat='\;|\n|\.|\?|\!', expand=False)
         df = df.explode('Text').dropna()
-        df = df[df.Text != ''].reset_index(drop=True)
+        df = df[df.Text.str.len() > 10].reset_index(drop=True)
     return df
 
 def load_text(sentences=False, grammarize=False):
