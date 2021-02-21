@@ -20,7 +20,7 @@ def separate_sentences(df):
     else:
         df.Text = df.Text.str.split(pat='\;|\n|\.|\?|\!', expand=False)
         df = df.explode('Text').dropna()
-        df = df[df.Text.str.len() > 10].reset_index(drop=True)
+        df = df[df.Text.str.len() > 1].reset_index(drop=True)
     return df
 
 def load_text(sentences=False, grammarize=False):
@@ -155,7 +155,13 @@ def assess_model(model, X_train, y_train, scores=None, ngram_range=(1,3)):
 def load_model():
     return keras.models.load_model('best-MLP')
 
-def predict_grade(model, text):
-    text = separate_sentences(text)
-    text.Text = text.Text.apply(lower_case)
-    return model.predict(text.Text).mean()
+def predict_grade(model, corpus):
+    if type(corpus) == str:
+        corpus = separate_sentences(corpus)
+        yhat = model.predict(corpus).mean()
+        return yhat
+    else:
+        predictions = []
+        for text in corpus:
+            predictions.append(predict_grade(model, text))
+        return pd.Series(predictions)
