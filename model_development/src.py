@@ -12,12 +12,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 import warnings
 warnings.filterwarnings('ignore')
 
-def separate_sentences(df):
-    if type(df) == str:
+def separate_sentences(df_in):
+    if type(df_in) == str:
+        df = df_in
         df = re.split('\;|\n|\.|\?|\!', df)
         df = pd.DataFrame(df, columns=['Text'])
         df = df[df.Text.str.len() > 10].dropna().reset_index(drop=True)
     else:
+        df = df_in.copy()
         df.Text = df.Text.str.split(pat='\;|\n|\.|\?|\!', expand=False)
         df = df.explode('Text').dropna()
         df = df[df.Text.str.len() > 1].reset_index(drop=True)
