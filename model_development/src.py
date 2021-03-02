@@ -4,7 +4,7 @@ from string import punctuation, digits
 import re
 import keras
 from nltk import pos_tag
-from nltk.corpus import stopwords, wordnet
+from nltk.corpus import stopwords as badwords, wordnet
 from nltk.stem import WordNetLemmatizer 
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
@@ -25,7 +25,7 @@ def separate_sentences(df_in):
         df = df[df.Text.str.len() > 1].reset_index(drop=True)
     return df
 
-def load_text(sentences=False, grammarize=False):
+def load_text(sentences=False, grammar=False, lemmas=False, tokens=False, stopwords=False):
     df = pd.read_csv('../data/samples_no_title.csv',
                        skipinitialspace=True,
                        sep=',', 
@@ -33,11 +33,22 @@ def load_text(sentences=False, grammarize=False):
                        escapechar='\\',
                        error_bad_lines=False,
                        usecols = ['Grade','Text']).dropna()
-    if grammarize:
-        df.Text = grammar_text(df.Text)
+    
     if sentences:
         df = separate_sentences(df)
-        
+
+    if stopwords == 'nltk':
+        stopwords = badwords.words('english')
+    
+    if grammar:
+        df['Grammarized'] = grammarize(df.Text)
+    if lemmas:
+        df['Lemmatized'] = lemmatize(df.Text, stopwords=stopwords)
+    if tokens:
+        df['Tokenized'] = clean_tokenize(df.Text, stopwords=stopwords)
+    elif stopwords:
+        df['Stopworded'] = ' '.join(clean_tokenize(df.Text, stopwords=stopwords))
+
     return df
 
 def get_word_index(df):
@@ -87,11 +98,11 @@ def letters(string):
     letters = re.findall('[a-z]+',string)
     return letters
 
-def clean_tokenize(series):
-    return series.apply(lower_case).apply(letters)
-
-def lemmatize(series):
-    return series.apply(pos_tag).apply(retag).apply(lemma)
+def clean_tokenize(series, stopwords=None):
+    series = series.apply(lower_case).apply(letters)
+    if stopwords:
+        series = series.apply(lambda text: [word for word in text if not word in stopwords])
+    return series    
 
 def replace_urls(series):
     return series.str.replace('www.','',regex=False).replace('\w*\.\w{2,}', value = "*url", regex=True)
@@ -110,20 +121,20 @@ def remove_weird_chars(string):
     weird_chars = [ '¦', '©', '±', '³', '½', 'Â', 'Ã', 'â', '“', '”', '€','\n']
     return ''.join([c for c in string if c not in weird_chars])
 
-def grammar_text(series):
+def grammarize(series):
     series = replace_urls(series)
     series = series.apply(remove_weird_chars).apply(isolate_punctuation)
     series = tag_uppercase(series)
     return series
 
-def lemma_text(series):
-    series = clean_tokenize(series)
-    series = lemmatize(series)
-    return series
+def lemmatize(series, stopwords=None):
+    series = clean_tokenize(series, stopwords)
+    series = series.apply(pos_tag).apply(retag).apply(lemma)
+    return series.str.join(' ')
 
 def lemmatize_grammarize_text(df):
-    df['lemmatized'] = lemma_text(df.Text).str.join(' ')
-    df['grammarized'] = grammar_text(df.Text)
+    df['lemmatized'] = lemmatize(df.Text)
+    df['grammarized'] = grammarize(df.Text)
     return df
 
 def assess_model(model, X_train, y_train, scores=None, ngram_range=(1,3)):
