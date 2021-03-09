@@ -11,8 +11,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def load_text(sentences=False, grammar=False, lemmas=False, tokens=False, stopwords=False):
-    df = pd.read_csv('../data/samples_no_title.csv',
+def load_text():
+    df = pd.read_csv('samples_no_title.csv',
                        skipinitialspace=True,
                        sep=',', 
                        quotechar='"', 
@@ -21,10 +21,7 @@ def load_text(sentences=False, grammar=False, lemmas=False, tokens=False, stopwo
                        usecols = ['Grade','Text']).dropna()
     return df
 
-def prepare_text(df, spacy_model=None):
-    if spacy_model == None:
-        !python -m spacy download en_core_web_lg
-        spacy_model = spacy.load('en_core_web_lg')
+def prepare_text(df, spacy_model):
     df = df.copy()
     df.Text = df.Text.str.replace('\n',' ')
     docs = df.Text.apply(spacy_model)
@@ -33,7 +30,7 @@ def prepare_text(df, spacy_model=None):
     for doc in docs:
         lemma_text = ' '.join([sent.lemma_ for sent in doc.sents])
         lemmas.append(lemma_text)
-        grammar_text = ' '.join([f'{word.pos_} {word.dep_}' for word in doc])
+        grammar_text = ' '.join([f'{word.text} {word.pos_} {word.dep_}' for word in doc])
         grammar.append(grammar_text)
 
     df['Lemmas'] = lemmas
