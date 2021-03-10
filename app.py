@@ -12,7 +12,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 
 #Load the Model
-model = load_model('model-Bi-LSTM-best')
+model = load_model('best-model')
 spacy = en_core_web_sm.load()
 process = 'Grammar'
 
@@ -27,7 +27,7 @@ app.layout = html.Div([
         style={'width': '%100', 'height': 300},
     ),
     html.Div(id='sample-text-output', style={'whiteSpace': 'pre-line'})
-
+])
 
 
 @app.callback(
