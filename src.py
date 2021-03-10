@@ -21,15 +21,11 @@ def load_text():
                        usecols = ['Grade','Text']).dropna()
     return df
 
-def prepare_text(df, spacy_model=None):
+def prepare_text(df, spacy_model):
     df = df.copy()
+
     df.Text = df.Text.str.replace('\n',' ')
-    try:
-        docs = df.Text.apply(spacy_model)
-    except:
-        spacy_model = spacy.load('en_core_web_lg')
-        docs = df.Text.apply(spacy_model)
-        pass
+    docs = df.Text.apply(spacy_model)
 
     lemmas = []
     grammar = []
@@ -91,14 +87,14 @@ def assess_model(model, X_train, y_train, scores=None, ngram_range=(1,3)):
         
     return scores
 
-def predict_grade(model, corpus, spacy_model=None):
+def predict_grade(model, corpus, col, spacy_model):
     if type(corpus) == str:
         corpus = separate_sentences(corpus)
         corpus = prepare_text(corpus, spacy_model)
-        yhat = model.predict(corpus).mean()
+        yhat = model.predict(corpus[col]).mean()
         return yhat
     else:
         predictions = []
         for text in corpus:
-            predictions.append(predict_grade(model, text))
+            predictions.append(predict_grade(model, text, col, spacy_model))
         return pd.Series(predictions)
