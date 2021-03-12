@@ -1,0 +1,5 @@
+/model_development
+/data
+*.csv
+*.png
+*.ipynb
